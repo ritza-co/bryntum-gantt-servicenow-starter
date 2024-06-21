@@ -1,0 +1,22 @@
+{
+  "name": "bryntum-gantt-express-sqlite",
+  "version": "1.0.0",
+  "description": "Starter repo for guide: How to use Bryntum Gantt with Express and SQLite",
+  "main": "server.js",
+  "type": "module",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "express": "4.18.2"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "dotenv": "^16.4.5",
+    "nodemon": "^3.0.2"
+  }
+}

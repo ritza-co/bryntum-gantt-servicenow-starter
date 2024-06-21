@@ -1,0 +1,6 @@
+.vscode
+
+# backend
+*.log
+.env
+node_modules/

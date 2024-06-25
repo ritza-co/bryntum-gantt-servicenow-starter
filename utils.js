@@ -31,7 +31,7 @@ export function calculateDuration(start_date, end_date) {
   return durationString;
 }
 
-export const bryntumEventFieldsToServiceNowFields = {
+export const bryntumTaskFieldsToServiceNowFields = {
   name: "short_description",
   startDate: "start_date",
   endDate: "end_date",
@@ -212,7 +212,7 @@ export function bryntumGanttDepLagToServiceNowDepLag(lag, lagUnit) {
   return formattedLag;
 }
 
-export function BryntumDepTypeToServiceNowDepType(type) {
+export function bryntumDepTypeToServiceNowDepType(type) {
   switch (type) {
     case 2:
       return "fs";

@@ -19,7 +19,7 @@ const gantt = new Gantt({
                         },
                         overrideStatusField : {
                             type          : 'checkbox',
-                            label         : 'Overide status',
+                            label         : 'Override status',
                             labelPosition : 'before',
                             name          : 'override_status'
                         }

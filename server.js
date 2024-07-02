@@ -1,7 +1,7 @@
-import bodyParser from "body-parser";
-import "dotenv/config";
-import express from "express";
-import path from "path";
+import bodyParser from 'body-parser';
+import 'dotenv/config';
+import express from 'express';
+import path from 'path';
 
 import {
   bryntumDepTypeToServiceNowDepType,

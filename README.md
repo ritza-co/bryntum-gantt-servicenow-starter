@@ -7,3 +7,9 @@ Install the dependencies using the following command:
 ```bash
 npm install
 ```
+
+Start the development server with the following command:
+
+```bash
+npm start
+```

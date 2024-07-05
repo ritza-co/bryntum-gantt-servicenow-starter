@@ -28,34 +28,33 @@ app.use(bodyParser.json());
 app.get('/api/load', async(req, res) => {
     try {
         const projectResponse = await fetch(
-        `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/pm_project?sysparm_fields=sys_id,short_description,start_date,end_date,wbs_order,percent_complete,description,status,override_status&sys_id=${process.env.SERVICENOW_PROJECT_SYS_ID}`,
-        {
-            headers : {
-                Accept         : 'application/json',
-                'Content-Type' : 'application/json',
-                Authorization :
-                'Basic ' +
-                btoa(
-                `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
-                )
-            }
-        }
+      `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/pm_project?sysparm_fields=sys_id,short_description,start_date,end_date,wbs_order,percent_complete,description,status,override_status&sys_id=${process.env.SERVICENOW_PROJECT_SYS_ID}`,
+      {
+          headers : {
+              Accept         : 'application/json',
+              'Content-Type' : 'application/json',
+              Authorization :
+            'Basic ' +
+            btoa(
+              `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
+            )
+          }
+      }
         );
         const projectResult = await projectResponse.json();
 
         const tasksResponse = await fetch(
-        `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/pm_project_task?sysparm_fields=relation_applied,relation_applied.parent,relation_applied.lag,relation_applied.sub_type,sys_id,short_description,parent,project,start_date,end_date,wbs_order,percent_complete,description,status,override_status&sub_tree_root=${process.env.SERVICENOW_PROJECT_SYS_ID}`,
-        {
-            headers : {
-                Accept         : 'application/json',
-                'Content-Type' : 'application/json',
-                Authorization :
-                'Basic ' +
-                btoa(
-                `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
-                )
+            `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/pm_project_task?sysparm_fields=relation_applied,relation_applied.parent,relation_applied.lag,relation_applied.sub_type,sys_id,short_description,parent,project,start_date,end_date,wbs_order,percent_complete,description,status,override_status&sub_tree_root=${process.env.SERVICENOW_PROJECT_SYS_ID}`,
+            {
+                headers : {
+                    Accept         : 'application/json',
+                    'Content-Type' : 'application/json',
+                    Authorization :
+                    'Basic ' +
+                    btoa(`${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
+                    )
+                }
             }
-        }
         );
 
         const tasksResult = await tasksResponse.json();
@@ -125,7 +124,7 @@ app.get('/api/load', async(req, res) => {
             manuallyScheduled : true,
             expanded          : true
         });
-        tasks.sort((a, b) => a.parentIndex - b.parentIndex);
+        // tasks.sort((a, b) => a.parentIndex - b.parentIndex);
 
         res.send({
             success : true,
@@ -180,10 +179,6 @@ app.post('/api/sync', async function(req, res) {
     }
 });
 
-// Start server
-app.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
-});
 
 async function applyTableChanges(table, changes) {
     let rows;
@@ -219,34 +214,36 @@ function createOperation(added, table) {
                     end_date          : formatDateServiceNow(data.endDate),
                     duration          : calculateDuration(data.startDate, data.endDate),
                     project           : process.env.SERVICENOW_PROJECT_SYS_ID,
-                    wbs_order         : data.parentIndex,
-                    description       : data?.note ? data.note : '',
+                    wbs_order         : data.parentIndex+1,
+                    description       : data.note,
                     status            : data.status,
-                    override_status   : data?.override_status
-                        ? parseInt(data.override_status)
-                        : 0
+                    override_status   : parseInt(data.override_status),
+                    constraint_date   : formatDateServiceNow(data.startDate),
+                    time_constraint   : 'snet'
                 };
 
                 const createTaskResponse = await fetch(
-                `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/pm_project_task`,
-                {
-                    method  : 'POST',
-                    headers : {
-                        Accept         : 'application/json',
-                        'Content-Type' : 'application/json',
-                        Authorization :
-                        'Basic ' +
-                        btoa(
-                        `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
-                        )
-                    },
-                    body : JSON.stringify(taskData)
-                }
+                    `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/pm_project_task`,
+                    {
+                        method  : 'POST',
+                        headers : {
+                            Accept         : 'application/json',
+                            'Content-Type' : 'application/json',
+                            Authorization :
+                            'Basic ' +
+                            btoa(
+                            `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
+                            )
+                        },
+                        body : JSON.stringify(taskData)
+                    }
                 );
+
                 const createTaskResJSON = await createTaskResponse.json();
                 result = createTaskResJSON?.result;
             }
             if (table === 'dependencies') {
+
                 const dependencyData = {
                     parent   : data.from,
                     child    : data.to,
@@ -255,24 +252,25 @@ function createOperation(added, table) {
                 };
 
                 const createDependencyResponse = await fetch(
-                `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/planned_task_rel_planned_task`,
-                {
-                    method  : 'POST',
-                    headers : {
-                        Accept         : 'application/json',
-                        'Content-Type' : 'application/json',
-                        Authorization :
-                        'Basic ' +
-                        btoa(
-                        `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
-                        )
-                    },
-                    body : JSON.stringify(dependencyData)
-                }
+                    `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/planned_task_rel_planned_task`,
+                    {
+                        method  : 'POST',
+                        headers : {
+                            Accept         : 'application/json',
+                            'Content-Type' : 'application/json',
+                            Authorization :
+                            'Basic ' +
+                            btoa(
+                            `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
+                            )
+                        },
+                        body : JSON.stringify(dependencyData)
+                    }
                 );
 
                 const createDependencyResJSON = await createDependencyResponse.json();
                 result = createDependencyResJSON?.result;
+
             }
             // Report to the client that the record identifier has been changed
             return { $PhantomId, id : result?.sys_id };
@@ -287,41 +285,42 @@ function deleteOperation(deleted, table) {
 
             if (table === 'tasks') {
                 await fetch(
-                `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/pm_project_task/${id}`,
-                {
-                    method  : 'DELETE',
-                    headers : {
-                        Accept         : 'application/json',
-                        'Content-Type' : 'application/json',
-                        Authorization :
-                        'Basic ' +
-                        btoa(
-                        `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
-                        )
+                    `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/pm_project_task/${id}`,
+                    {
+                        method  : 'DELETE',
+                        headers : {
+                            Accept         : 'application/json',
+                            'Content-Type' : 'application/json',
+                            Authorization :
+                            'Basic ' +
+                            btoa(
+                            `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
+                            )
+                        }
                     }
-                }
                 );
             }
             if (table === 'dependencies') {
                 await fetch(
-                `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/planned_task_rel_planned_task/${id}`,
-                {
-                    method  : 'DELETE',
-                    headers : {
-                        Accept         : 'application/json',
-                        'Content-Type' : 'application/json',
-                        Authorization :
-                        'Basic ' +
-                        btoa(
-                        `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
-                        )
+                    `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/planned_task_rel_planned_task/${id}`,
+                    {
+                        method  : 'DELETE',
+                        headers : {
+                            Accept         : 'application/json',
+                            'Content-Type' : 'application/json',
+                            Authorization :
+                            'Basic ' +
+                            btoa(
+                            `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
+                            )
+                        }
                     }
-                }
                 );
             }
         })
     );
 }
+
 
 function updateOperation(updated, table) {
     let result;
@@ -354,25 +353,49 @@ function updateOperation(updated, table) {
                     updateBody.duration = calculateDuration(startDate, data.endDate);
                 }
 
-                const updateTaskRes = await fetch(
-                `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/pm_project_task/${id}`,
-                {
-                    method  : 'PATCH',
-                    headers : {
-                        Accept         : 'application/json',
-                        'Content-Type' : 'application/json',
-                        Authorization :
-                        'Basic ' +
-                        btoa(
-                        `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
-                        )
-                    },
-                    body : JSON.stringify(updateBody)
-                }
+
+                const projectResponse = await fetch(
+                    `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/pm_project?sysparm_fields=sys_id,short_description,start_date,end_date,wbs_order,percent_complete,description,status,override_status&sys_id=${process.env.SERVICENOW_PROJECT_SYS_ID}`,
+                    {
+                        headers : {
+                            Accept         : 'application/json',
+                            'Content-Type' : 'application/json',
+                            Authorization :
+                            'Basic ' +
+                            btoa(
+                            `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
+                            )
+                        }
+                    }
                 );
-                const updateTaskResJSON = await updateTaskRes.json();
+                let table = 'pm_project_task';
+                const projectResult = await projectResponse.json();
+                if (projectResult?.result[0]){
+                    const { sys_id } = projectResult?.result[0];
+                    if (sys_id === id){
+                        table = 'pm_project';
+                    }
+                }
+
+                await fetch(
+                    `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/${table}/${id}`,
+                    {
+                        method  : 'PATCH',
+                        headers : {
+                            Accept         : 'application/json',
+                            'Content-Type' : 'application/json',
+                            Authorization :
+                            'Basic ' +
+                            btoa(
+                            `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
+                            )
+                        },
+                        body : JSON.stringify(updateBody)
+                    }
+                );
             }
             if (table === 'dependencies') {
+
                 for (const [key, value] of Object.entries(data)) {
                     if (bryntumDependencyFieldsToServiceNowFields[key]) {
                         updateBody[bryntumDependencyFieldsToServiceNowFields[key]] = value;
@@ -388,43 +411,49 @@ function updateOperation(updated, table) {
                 // 1. delete dependency then create new one. In ServiceNow it's a good practice to delete a relationship and create a new one between the correct tasks
 
                 await fetch(
-                `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/planned_task_rel_planned_task/${id}`,
-                {
-                    method  : 'DELETE',
-                    headers : {
-                        Accept         : 'application/json',
-                        'Content-Type' : 'application/json',
-                        Authorization :
-                        'Basic ' +
-                        btoa(
-                        `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
-                        )
+                    `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/planned_task_rel_planned_task/${id}`,
+                    {
+                        method  : 'DELETE',
+                        headers : {
+                            Accept         : 'application/json',
+                            'Content-Type' : 'application/json',
+                            Authorization :
+                            'Basic ' +
+                            btoa(
+                            `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
+                            )
+                        }
                     }
-                }
                 );
 
                 const createDependencyResponse = await fetch(
-                `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/planned_task_rel_planned_task`,
-                {
-                    method  : 'POST',
-                    headers : {
-                        Accept         : 'application/json',
-                        'Content-Type' : 'application/json',
-                        Authorization :
-                        'Basic ' +
-                        btoa(
-                        `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
-                        )
-                    },
-                    body : JSON.stringify(updateBody)
-                }
+                    `https://${process.env.SERVICENOW_PDI_ID}.service-now.com/api/now/table/planned_task_rel_planned_task`,
+                    {
+                        method  : 'POST',
+                        headers : {
+                            Accept         : 'application/json',
+                            'Content-Type' : 'application/json',
+                            Authorization :
+                            'Basic ' +
+                            btoa(
+                            `${process.env.SERVICENOW_USERNAME}:${process.env.SERVICENOW_PASSWORD}`
+                            )
+                        },
+                        body : JSON.stringify(updateBody)
+                    }
                 );
 
                 const createDependencyResJSON = await createDependencyResponse.json();
                 result = createDependencyResJSON?.result;
                 // Report to the client that the record identifier has been changed
                 return { oldId : id, newId : result?.sys_id };
+
             }
         })
     );
 }
+
+// Start server
+app.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
+});
